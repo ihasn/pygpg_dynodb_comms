@@ -95,16 +95,26 @@ while True:
             #Else safe message as read
             else:
               messages.save()
+    #Search MIT's PGP key server
     if n.strip() == 'search':
+        #User is prompted to search for something
         search = raw_input("Search for: ")
+        #Search is sent
         response = urllib.urlopen("http://pgp.mit.edu:11371/pks/lookup?options=mr&op=get&search=" + search)
+        #Result is safed to pub_key
         pub_key = response.read()
+        #Might need to move this up to top
         from pgpdump import AsciiData
+        #pub_key is stripped of they PGP lines
         test = AsciiData(pub_key)
         test.strip_magic(pub_key)
+        #Pub key packets are listed
         packets = list(test.packets())
+        #Print Name/Email of pub_key owner
         print packets[1]
+        #Promt user if add pub_key
         add_response = raw_input("Add this Pubkey? (yes or no) ")
+        #If yes import key
         if add_response == 'yes':
           print "Import: ", gpg.import_keys(pub_key).summary()
         else:
