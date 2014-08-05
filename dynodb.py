@@ -15,15 +15,16 @@ use_local_boto = raw_input("Use local AWS keys? (yes or no) ")
 if use_local_boto == 'no':
   aws_access_key_id = raw_input("AWS Access key: ")
   aws_secret_access_key = raw_input("AWS Secret key: ")
-
+  #If promting for keys run command with keys set
+  gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key))
+else:
+  #Else use local keys
+  gpgcomms = Table('comms')
 #Set gpg home direcotry
 homedir_loc = raw_input('Type gpg home directory: ')
 
 #Set the gpg call and specify the /usr/bin/gpg2 binary. Pass users gpg inputed homedir
 gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=homedir_loc)
-
-#Initiate the dynamoDB connection using AWS keys
-gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key))
 
 #While loop creates the user interface, allows for send, recieve, search and quit
 while True:
