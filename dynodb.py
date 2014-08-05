@@ -14,7 +14,7 @@ gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=homedir_loc)
 gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key))
 
 while True:
-    n = raw_input("Please enter option(send, recieve, search, delete, quit): ")
+    n = raw_input("Please enter option(send, recieve, search, quit): ")
     if n.strip() == 'quit':
         break
     if n.strip() == 'send':
@@ -40,7 +40,6 @@ while True:
             messages.delete()
           else:
             messages.save()
-          
     if n.strip() == 'search':
         search = raw_input("Search for: ")
         response = urllib.urlopen("http://pgp.mit.edu:11371/pks/lookup?options=mr&op=get&search=" + search)
@@ -53,12 +52,5 @@ while True:
         add_response = raw_input("Add this Pubkey? (yes or no) ")
         if add_response == 'yes':
           print "Import: ", gpg.import_keys(pub_key).summary()
-        else:
-          print "Returning"
-    if n.strip() == 'delete':
-        key_id_queue = raw_input("GPG Key ID: ")
-        sure = raw_input("Are you sure you want to delete the queue: (yes or no)")
-        if sure == 'yes':
-          print "dynodb delete entry"
         else:
           print "Returning"
