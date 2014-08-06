@@ -1,13 +1,13 @@
 #This is a script I wrote to interface with dynamoDB in AWS's cloud to send messages back and forth via GPG
 #Patrick Pierson patrick.c.pierson@gmail.com
 
-#Import gnupg, getpass, time, urlib
-import gnupg, getpass, time, urllib
+#Import gnupg, getpass, urlib
+import gnupg, getpass, urllib
 #Import boto.dynamodb2 and other dynamodb code
 import boto.dynamodb2
 from boto.dynamodb2.fields import HashKey
 from boto.dynamodb2.table import Table
-#Import more time stuff
+#Import time stuff
 from time import gmtime, strftime
 
 #Promot to ask if user wants to use local AWS keys or to be promoted for them, currently on my machine only prompted keys work
