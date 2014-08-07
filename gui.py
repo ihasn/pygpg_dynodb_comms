@@ -23,7 +23,7 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.bind("<Return>", self.OnPressEnter)
         self.entryVariable.set(u"Enter text here.")
 
-        button = Tkinter.Button(self,text=u"Click me !",
+        button = Tkinter.Button(self,text=u"Show GPG key fingerprint",
                                 command=self.OnButtonClick)
         button.grid(column=1,row=0)
 
