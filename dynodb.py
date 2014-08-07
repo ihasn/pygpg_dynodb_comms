@@ -10,6 +10,67 @@ from boto.dynamodb2.table import Table
 #Import time stuff
 from time import gmtime, strftime, sleep
 
+def encrypt_message_send_db(message, key_id, gpgcomms):
+  #Message is encrypted with user selected public key
+  encrypt_message = str(gpg.encrypt(message, key_id))
+  #User is informed the message is being sent with the printed messages encrypted
+  print "Encrypted Message Send to DynamoDB: " + encrypt_message
+  #Message is put on DynamoDB with the key_id, time, message and set read to 0
+  gpgcomms.put_item(data={'key_id': key_id, 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': encrypt_message, 'read': '0'})
+
+def recieve(recoption):
+  #Uses the gpg connection to list available private keys and creates list
+  private_keys = gpg.list_keys(True)
+  j = 0
+  #Initiates a loop that prints out user's available private keys and fingerprints
+  for i in private_keys.uids:
+    fingerprint = private_keys.fingerprints[j]
+    print "Option: %s %s : %s" % (j, i, fingerprint)
+    j += 1
+  #Gives user the option to select a Private Key
+  option = int(raw_input("Select Option # for Private Key ID: "))
+  #Private Key is set
+  key_id = private_keys.fingerprints[option]
+  #User is promted for Private Key password
+  password = getpass.getpass()
+  if recoption == 'rec_mode':
+    try:
+      while True:
+        decrypt_messages(option, key_id, password)
+        print "Sleeping for 5 seconds"
+        sleep(5)
+    except KeyboardInterrupt:
+          pass
+  else:
+    decrypt_messages(option, key_id, password)
+
+def decrypt_messages(option, key_id, password):
+  #DynamoDB is queried for selected Key fingerpraint
+  results = gpgcomms.query_2(key_id__eq= key_id)
+  #Messages are printed to user
+  for messages in results:
+    pulled_encrypt_message = messages['message']
+    #Encrypted first
+    print "Pulled Encrypted Message: " + pulled_encrypt_message
+    #Message is decrypted
+    decrypted_message = str(gpg.decrypt(str(pulled_encrypt_message), passphrase=password))
+    #If decrypted message is blank, start from beginning
+    if decrypted_message == '':
+      print "Message not sucessfully decrypted or blank"
+    else:
+      #Decrypted message is printed
+      print "Decrypted Message: " + decrypted_message
+      #Message is marked as read
+      messages['read'] = '1'
+      #User is prompted to delete message or not
+      del_message = raw_input("Delete message? (yes or no) ")
+      #If yes then delete
+      if del_message == 'yes':
+        messages.delete()
+        #Else safe message as read
+      else:
+        messages.save()
+
 #Promot to ask if user wants to use local AWS keys or to be promoted for them, currently on my machine only prompted keys work
 use_local_boto = raw_input("Use local AWS keys? (yes or no) ")
 if use_local_boto == 'no':
@@ -49,99 +110,11 @@ while True:
         key_id = public_keys.fingerprints[option]
         #User inputs message
         message = raw_input("Message: ")
-        #Message is encrypted with user selected public key
-        encrypt_message = str(gpg.encrypt(message, key_id))
-        #User is informed the message is being sent with the printed messages encrypted
-        print "Encrypted Message Send to DynamoDB: " + encrypt_message
-        #Message is put on DynamoDB with the key_id, time, message and set read to 0
-        gpgcomms.put_item(data={'key_id': key_id, 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': encrypt_message, 'read': '0'})
+        encrypt_message_send_db(message, key_id, gpgcomms)
     #Recieve an encrypted message from the DynamoDB
-    if n.strip() == 'recieve':
-        #Uses the gpg connection to list available private keys and creates list
-        private_keys = gpg.list_keys(True)
-        j = 0
-        #Initiates a loop that prints out user's available private keys and fingerprints
-        for i in private_keys.uids:
-          fingerprint = private_keys.fingerprints[j]
-          print "Option: %s %s : %s" % (j, i, fingerprint)
-          j += 1
-        #Gives user the option to select a Private Key
-        option = int(raw_input("Select Option # for Private Key ID: "))
-        #Private Key is set
-        key_id = private_keys.fingerprints[option]
-        #User is promted for Private Key password
-        password = getpass.getpass()
-        #DynamoDB is queried for selected Key fingerprint
-        results = gpgcomms.query_2(key_id__eq= key_id)
-        #Messages are printed to user
-        for messages in results:
-          pulled_encrypt_message = messages['message']
-          #Encrypted first
-          print "Pulled Encrypted Message: " + pulled_encrypt_message
-          #Message is decrypted
-          decrypted_message = str(gpg.decrypt(str(pulled_encrypt_message), passphrase=password))
-          #If decrypted message is blank, start from beginning
-          if decrypted_message == '':
-            print "Message not sucessfully decrypted or blank"
-          else:
-            #Decrypted message is printed
-            print "Decrypted Message: " + decrypted_message
-            #Message is marked as read
-            messages['read'] = '1'
-            #User is prompted to delete message or not
-            del_message = raw_input("Delete message? (yes or no) ")
-            #If yes then delete
-            if del_message == 'yes':
-              messages.delete()
-            #Else safe message as read
-            else:
-              messages.save()
-    if n.strip() == 'rec_mode':
-        #Uses the gpg connection to list available private keys and creates list
-        private_keys = gpg.list_keys(True)
-        j = 0
-        #Initiates a loop that prints out user's available private keys and fingerprints
-        for i in private_keys.uids:
-          fingerprint = private_keys.fingerprints[j]
-          print "Option: %s %s : %s" % (j, i, fingerprint)
-          j += 1
-        #Gives user the option to select a Private Key
-        option = int(raw_input("Select Option # for Private Key ID: "))
-        #Private Key is set
-        key_id = private_keys.fingerprints[option]
-        #User is promted for Private Key password
-        password = getpass.getpass()
-        try:
-          while True:
-            #DynamoDB is queried for selected Key fingerprint
-            results = gpgcomms.query_2(key_id__eq= key_id)
-            #Messages are printed to user
-            for messages in results:
-              pulled_encrypt_message = messages['message']
-              #Encrypted first
-              print "Pulled Encrypted Message: " + pulled_encrypt_message
-              #Message is decrypted
-              decrypted_message = str(gpg.decrypt(str(pulled_encrypt_message), passphrase=password))
-              #If decrypted message is blank, start from beginning
-              if decrypted_message == '':
-                print "Message not sucessfully decrypted or blank"
-              else:
-                #Decrypted message is printed
-                print "Decrypted Message: " + decrypted_message
-                #Message is marked as read
-                messages['read'] = '1'
-                #User is prompted to delete message or not
-                del_message = raw_input("Delete message? (yes or no) ")
-                #If yes then delete
-                if del_message == 'yes':
-                  messages.delete()
-                #Else safe message as read
-                else:
-                  messages.save()
-            print "Sleeping for 5 seconds"
-            sleep(5)
-        except KeyboardInterrupt:
-          pass
+    if n.strip() == 'recieve' or n.strip() == 'rec_mode':
+      recoption = n.strip()
+      recieve(recoption)
     #Search MIT's PGP key server
     if n.strip() == 'search':
         #User is prompted to search for something

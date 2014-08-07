@@ -47,7 +47,6 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
 
-
     def OnButtonClick(self):
         self.entry.focus_set()
         gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=self.entryVariable.get())
@@ -67,3 +66,4 @@ if __name__ == "__main__":
     app = simpleapp_tk(None)
     app.title('GPG DynamoDB Comms')
     app.mainloop()
+
