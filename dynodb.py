@@ -8,7 +8,7 @@ import boto.dynamodb2
 from boto.dynamodb2.fields import HashKey
 from boto.dynamodb2.table import Table
 #Import time stuff
-from time import gmtime, strftime
+from time import gmtime, strftime, sleep
 
 #Promot to ask if user wants to use local AWS keys or to be promoted for them, currently on my machine only prompted keys work
 use_local_boto = raw_input("Use local AWS keys? (yes or no) ")
@@ -28,7 +28,7 @@ gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=homedir_loc)
 
 #While loop creates the user interface, allows for send, recieve, search and quit
 while True:
-    n = raw_input("Please enter option(send, recieve, search, quit): ")
+    n = raw_input("Please enter option(send, recieve, rec_mode, search, quit): ")
     #Quits for user
     if n.strip() == 'quit':
         break
@@ -96,6 +96,52 @@ while True:
             #Else safe message as read
             else:
               messages.save()
+    if n.strip() == 'rec_mode':
+        #Uses the gpg connection to list available private keys and creates list
+        private_keys = gpg.list_keys(True)
+        j = 0
+        #Initiates a loop that prints out user's available private keys and fingerprints
+        for i in private_keys.uids:
+          fingerprint = private_keys.fingerprints[j]
+          print "Option: %s %s : %s" % (j, i, fingerprint)
+          j += 1
+        #Gives user the option to select a Private Key
+        option = int(raw_input("Select Option # for Private Key ID: "))
+        #Private Key is set
+        key_id = private_keys.fingerprints[option]
+        #User is promted for Private Key password
+        password = getpass.getpass()
+        try:
+          while True:
+            #DynamoDB is queried for selected Key fingerprint
+            results = gpgcomms.query_2(key_id__eq= key_id)
+            #Messages are printed to user
+            for messages in results:
+              pulled_encrypt_message = messages['message']
+              #Encrypted first
+              print "Pulled Encrypted Message: " + pulled_encrypt_message
+              #Message is decrypted
+              decrypted_message = str(gpg.decrypt(str(pulled_encrypt_message), passphrase=password))
+              #If decrypted message is blank, start from beginning
+              if decrypted_message == '':
+                print "Message not sucessfully decrypted or blank"
+              else:
+                #Decrypted message is printed
+                print "Decrypted Message: " + decrypted_message
+                #Message is marked as read
+                messages['read'] = '1'
+                #User is prompted to delete message or not
+                del_message = raw_input("Delete message? (yes or no) ")
+                #If yes then delete
+                if del_message == 'yes':
+                  messages.delete()
+                #Else safe message as read
+                else:
+                  messages.save()
+            print "Sleeping for 5 seconds"
+            sleep(5)
+        except KeyboardInterrupt:
+          pass
     #Search MIT's PGP key server
     if n.strip() == 'search':
         #User is prompted to search for something
