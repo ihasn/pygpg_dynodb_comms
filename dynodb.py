@@ -36,15 +36,15 @@ def recieve(recoption):
   if recoption == 'rec_mode':
     try:
       while True:
-        decrypt_messages(option, key_id, password)
+        decrypt_messages(key_id, password, gpgcomms)
         print "Sleeping for 5 seconds"
         sleep(5)
     except KeyboardInterrupt:
           pass
   else:
-    decrypt_messages(option, key_id, password)
+    decrypt_messages(key_id, password, gpgcomms)
 
-def decrypt_messages(option, key_id, password):
+def decrypt_messages(key_id, password, gpgcomms):
   #DynamoDB is queried for selected Key fingerpraint
   results = gpgcomms.query_2(key_id__eq= key_id)
   #Messages are printed to user
@@ -67,7 +67,7 @@ def decrypt_messages(option, key_id, password):
       #If yes then delete
       if del_message == 'yes':
         messages.delete()
-        #Else safe message as read
+      #Else save message as read
       else:
         messages.save()
 
