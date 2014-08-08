@@ -9,6 +9,7 @@ from boto.dynamodb2.fields import HashKey
 from boto.dynamodb2.table import Table
 #Import time stuff
 from time import gmtime, strftime, sleep
+from pgpdump import AsciiData
 
 def encrypt_message_send_db(message, key_id, gpgcomms):
   #Message is encrypted with user selected public key
@@ -71,6 +72,30 @@ def decrypt_messages(key_id, password, gpgcomms):
       else:
         messages.save()
 
+def search():
+  #User is prompted to search for something
+  search = raw_input("*Needs work*Search for: ")
+  #Search is sent
+  response = urllib.urlopen("http://pgp.mit.edu:11371/pks/lookup?options=mr&op=get&search=" + search)
+  #Result is safed to pub_key
+  pub_key = response.read()
+  #pub_key is stripped of they PGP lines
+  test = AsciiData(pub_key)
+  test.strip_magic(pub_key)
+  #Pub key packets are listed
+  packets = list(test.packets())
+  #Print Name/Email of pub_key owner
+  for packet in packets:
+    print packet
+    #Promt user if add pub_key
+    add_response = raw_input("Add this Pubkey? (yes or no) ")
+    #If yes import key, need to update this section to parse through each key to allow selection
+    #Mirror how pub and private keys are selected
+    if add_response == 'yes':
+      print "Import: ", gpg.import_keys(packet).summary()
+    else:
+      print "Returning"
+
 #Promot to ask if user wants to use local AWS keys or to be promoted for them, currently on my machine only prompted keys work
 use_local_boto = raw_input("Use local AWS keys? (yes or no) ")
 if use_local_boto == 'no':
@@ -117,25 +142,4 @@ while True:
       recieve(recoption)
     #Search MIT's PGP key server
     if n.strip() == 'search':
-        #User is prompted to search for something
-        search = raw_input("Search for: ")
-        #Search is sent
-        response = urllib.urlopen("http://pgp.mit.edu:11371/pks/lookup?options=mr&op=get&search=" + search)
-        #Result is safed to pub_key
-        pub_key = response.read()
-        #Might need to move this up to top
-        from pgpdump import AsciiData
-        #pub_key is stripped of they PGP lines
-        test = AsciiData(pub_key)
-        test.strip_magic(pub_key)
-        #Pub key packets are listed
-        packets = list(test.packets())
-        #Print Name/Email of pub_key owner
-        print packets[1]
-        #Promt user if add pub_key
-        add_response = raw_input("Add this Pubkey? (yes or no) ")
-        #If yes import key
-        if add_response == 'yes':
-          print "Import: ", gpg.import_keys(pub_key).summary()
-        else:
-          print "Returning"
+      search()
