@@ -7,6 +7,9 @@ import gnupg, getpass, urllib
 #Import time stuff
 from time import gmtime, strftime
 import tkMessageBox
+import boto.dynamodb2
+from boto.dynamodb2.fields import HashKey
+from boto.dynamodb2.table import Table
 
 class simpleapp_tk(Tkinter.Tk):
     def __init__(self,parent):
@@ -16,27 +19,42 @@ class simpleapp_tk(Tkinter.Tk):
 
     def initialize(self):
         self.grid()
+        
+        self.entryAWSKeyVariable = Tkinter.StringVar()
+        self.entryAWSKey = Tkinter.Entry(self, textvariable=self.entryAWSKeyVariable)
+        self.entryAWSKey.grid(column=0,row=0,sticky='EW')
+        self.entryAWSKeyVariable.set(u"AWS Key")
+
+        self.entryAWSSecretVariable = Tkinter.StringVar()
+        self.entryAWSSecret = Tkinter.Entry(self, textvariable=self.entryAWSSecretVariable)
+        self.entryAWSSecret.grid(column=0,row=1,sticky='EW')
+        self.entryAWSSecretVariable.set(u"AWS Secret Key")
 
         self.entryVariable = Tkinter.StringVar()
         self.entry = Tkinter.Entry(self,textvariable=self.entryVariable)
-        self.entry.grid(column=0,row=0,sticky='EW')
+        self.entry.grid(column=0,row=2,sticky='EW')
         self.entry.bind("<Return>", self.OnPressEnter)
         self.entryVariable.set(u"User .gnupg directory")
 
+        self.key_idLabelVariable = Tkinter.StringVar()
+        key_id = Tkinter.Label(self,textvariable=self.key_idLabelVariable, anchor="w", fg="white", bg="blue",wraplength=50)
+        key_id.grid(column=0,row=4,sticky='EW')
+        self.key_idLabelVariable.set(u"Key ID")
+
         self.messageVariable = Tkinter.StringVar()
         self.message = Tkinter.Entry(self,textvariable=self.messageVariable)
-        self.message.grid(column=0,row=1,sticky='EW')
+        self.message.grid(column=0,row=3,sticky='EW')
         self.message.bind("<Return>", self.OnPressEnter)
         self.messageVariable.set(u"Message")
 
-
-        button = Tkinter.Button(self,text=u"Open",
-                                command=self.OnButtonClick)
+        button = Tkinter.Button(self,text=u"Encrypt", command=self.OnButtonClick)
         button.grid(column=1,row=0)
 
+        send = Tkinter.Button(self, text=u"Send", command=self.SendMessage)
+        send.grid(column=1,row=1)
+
         self.labelVariable = Tkinter.StringVar()
-        label = Tkinter.Label(self,textvariable=self.labelVariable,
-                              anchor="w",fg="white",bg="blue",wraplength=50)
+        label = Tkinter.Label(self,textvariable=self.labelVariable, anchor="w",fg="white",bg="blue",wraplength=50)
         label.grid(column=0,row=4,columnspan=5,rowspan=4,sticky='EW')
         self.labelVariable.set(u"Output")
 
@@ -47,14 +65,19 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
 
+    def SendMessage(self):
+        gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=self.entryAWSKeyVariable.get(), aws_secret_access_key=self.entryAWSSecretVariable.get()))
+        gpgcomms.put_item(data={'key_id': self.key_idLabelVariable.get(), 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': self.labelVariable.get(), 'read': '0'})
+        tkMessageBox.showinfo("Sent", "Message sent to DB")
+
     def OnButtonClick(self):
         self.entry.focus_set()
         gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=self.entryVariable.get())
         public_keys = gpg.list_keys()
         key_id = public_keys.fingerprints[0]
+        self.key_idLabelVariable.set(key_id)
         encrypt_message = str(gpg.encrypt(self.messageVariable.get(), key_id))
         self.labelVariable.set(encrypt_message)
-        tkMessageBox.showinfo('test', encrypt_message)
         self.entry.selection_range(0, Tkinter.END)
 
     def OnPressEnter(self,event):
