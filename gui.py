@@ -19,31 +19,38 @@ class simpleapp_tk(Tkinter.Tk):
 
     def initialize(self):
         self.grid()
-        
-        self.entryAWSKeyVariable = Tkinter.StringVar()
-        self.entryAWSKey = Tkinter.Entry(self, textvariable=self.entryAWSKeyVariable)
-        self.entryAWSKey.grid(column=0,row=0,sticky='EW')
-        self.entryAWSKeyVariable.set(u"AWS Key")
+        tkMessageBox.askquestion("Use Local AWS Keys", "Use Local AWS Keys", icon='warning')
 
-        self.entryAWSSecretVariable = Tkinter.StringVar()
-        self.entryAWSSecret = Tkinter.Entry(self, textvariable=self.entryAWSSecretVariable)
-        self.entryAWSSecret.grid(column=0,row=1,sticky='EW')
-        self.entryAWSSecretVariable.set(u"AWS Secret Key")
+        if 'yes':
+          self.LocalKeysInitiateDBConnection()
+          local_keys = 2
+        else:
+          self.entryAWSKeyVariable = Tkinter.StringVar()
+          self.entryAWSKey = Tkinter.Entry(self, textvariable=self.entryAWSKeyVariable)
+          self.entryAWSKey.grid(column=0,row=0,sticky='EW')
+          self.entryAWSKeyVariable.set(u"AWS Key")
 
+          self.entryAWSSecretVariable = Tkinter.StringVar()
+          self.entryAWSSecret = Tkinter.Entry(self, textvariable=self.entryAWSSecretVariable)
+          self.entryAWSSecret.grid(column=0,row=1,sticky='EW')
+          self.entryAWSSecretVariable.set(u"AWS Secret Key")
+          
+          self.InputKeysInitiateDBConnection()
+      
         self.entryVariable = Tkinter.StringVar()
         self.entry = Tkinter.Entry(self,textvariable=self.entryVariable)
-        self.entry.grid(column=0,row=2,sticky='EW')
+        self.entry.grid(column=0,row=2-local_keys,sticky='EW')
         self.entry.bind("<Return>", self.OnPressEnter)
         self.entryVariable.set(u"User .gnupg directory")
 
         self.key_idLabelVariable = Tkinter.StringVar()
         key_id = Tkinter.Label(self,textvariable=self.key_idLabelVariable, anchor="w", fg="white", bg="blue",wraplength=50)
-        key_id.grid(column=0,row=4,sticky='EW')
+        key_id.grid(column=0,row=4-local_keys,sticky='EW')
         self.key_idLabelVariable.set(u"Key ID")
 
         self.messageVariable = Tkinter.StringVar()
         self.message = Tkinter.Entry(self,textvariable=self.messageVariable)
-        self.message.grid(column=0,row=3,sticky='EW')
+        self.message.grid(column=0,row=3-local_keys,sticky='EW')
         self.message.bind("<Return>", self.OnPressEnter)
         self.messageVariable.set(u"Message")
 
@@ -55,7 +62,7 @@ class simpleapp_tk(Tkinter.Tk):
 
         self.labelVariable = Tkinter.StringVar()
         label = Tkinter.Label(self,textvariable=self.labelVariable, anchor="w",fg="white",bg="blue",wraplength=50)
-        label.grid(column=0,row=4,columnspan=5,rowspan=4,sticky='EW')
+        label.grid(column=0,row=4-local_keys,columnspan=5,rowspan=4,sticky='EW')
         self.labelVariable.set(u"Output")
 
         self.grid_columnconfigure(0,weight=1)
@@ -65,9 +72,14 @@ class simpleapp_tk(Tkinter.Tk):
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
 
+    def InputKeysInitiateDBConnection(self):
+        self.gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=self.entryAWSKeyVariable.get(), aws_secret_access_key=self.entryAWSSecretVariable.get()))
+
+    def LocalKeysInitiateDBConnection(self):
+        self.gpgcomms = Table('comms')
+
     def SendMessage(self):
-        gpgcomms = Table('comms',connection= boto.dynamodb2.connect_to_region("us-east-1", aws_access_key_id=self.entryAWSKeyVariable.get(), aws_secret_access_key=self.entryAWSSecretVariable.get()))
-        gpgcomms.put_item(data={'key_id': self.key_idLabelVariable.get(), 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': self.labelVariable.get(), 'read': '0'})
+        self.gpgcomms.put_item(data={'key_id': self.key_idLabelVariable.get(), 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': self.labelVariable.get(), 'read': '0'})
         tkMessageBox.showinfo("Sent", "Message sent to DB")
 
     def OnButtonClick(self):
