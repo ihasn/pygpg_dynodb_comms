@@ -55,11 +55,14 @@ class simpleapp_tk(Tkinter.Tk):
         self.message.bind("<Return>", self.OnPressEnter)
         self.messageVariable.set(u"Message")
 
-        button = Tkinter.Button(self,text=u"Encrypt", command=self.OnButtonClick)
+        button = Tkinter.Button(self,text=u"Activate", command=self.OnButtonClick)
         button.grid(column=1,row=0)
 
         send = Tkinter.Button(self, text=u"Send", command=self.SendMessage)
         send.grid(column=1,row=1)
+
+        recieve = Tkinter.Button(self, text=u"Recieve", command=self.OnRecieveClick)
+        recieve.grid(column=1,row=2)
 
         self.labelVariable = Tkinter.StringVar()
         label = Tkinter.Message(self,textvariable=self.labelVariable, anchor="w")
@@ -67,7 +70,7 @@ class simpleapp_tk(Tkinter.Tk):
         self.labelVariable.set(u"Output")
 
         self.grid_columnconfigure(0,weight=1)
-        self.resizable(True,False)
+        self.resizable(True,True)
         self.update()
         self.geometry(self.geometry())       
         self.entry.focus_set()
@@ -82,6 +85,13 @@ class simpleapp_tk(Tkinter.Tk):
     def SendMessage(self):
         self.gpgcomms.put_item(data={'key_id': self.key_idLabelVariable.get(), 'time': strftime("%Y%m%d%H%M%S", gmtime()), 'message': self.labelVariable.get(), 'read': '0'})
         tkMessageBox.showinfo("Sent", "Message sent to DB")
+
+    def RecieveMessage(self):
+        results = self.gpgcomms.query_2(self.key_idLabelVariable.get())
+        tkMessageBox.message("Password is", passowrd, icon='warning')
+        #for messages in results:
+          #pulled_encrypt_message = message['message']
+
 
     def InitGPG(self):
         self.gpg = gnupg.GPG(binary='/usr/bin/gpg2', homedir=self.entryVariable.get())
@@ -100,6 +110,30 @@ class simpleapp_tk(Tkinter.Tk):
         self.labelVariable.set( self.entryVariable.get()+" (You pressed ENTER)" )
         self.entry.focus_set()
         self.entry.selection_range(0, Tkinter.END)
+
+    def OnRecieveClick(self):
+        self.entry.focus_set()
+        password = Password(self)
+        self.wait_window(password.top)
+        self.RecieveMessage()
+
+class Password:
+    def __init__(self, parent):
+        Tkinter.Tk(None)
+        self.parent = parent
+
+        self.messageVariable = Tkinter.StringVar()
+        self.message = Tkinter.Entry(self,textvariable=self.messageVariable)
+        self.message.grid(column=0,row=4-local_keys,sticky='EW')
+        self.messageVariable.set(u"Password")
+
+        b = Button(password, text="OK", command=self.ok)
+        b.pack(pady=5)
+
+    def ok(self):
+
+        print "value is", self.e.get()
+        self.ok.destroy()
 
 if __name__ == "__main__":
     app = simpleapp_tk(None)
